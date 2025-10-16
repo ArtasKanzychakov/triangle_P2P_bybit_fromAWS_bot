@@ -1,9 +1,9 @@
 # src/config.py
 import os
 from logging import getLogger
+import logging
 
 # Настройка логирования
-import logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -11,7 +11,6 @@ logging.basicConfig(
 logger = getLogger(__name__)
 
 # --- Загрузка переменных окружения ---
-
 # Токен для Telegram бота, полученный от @BotFather
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 if not TELEGRAM_BOT_TOKEN:
