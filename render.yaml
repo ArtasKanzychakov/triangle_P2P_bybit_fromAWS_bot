@@ -2,13 +2,13 @@ services:
   - type: web
     name: bybit-arbitrage-bot
     env: python
-    runtime: python-3.11.4 # Явно указываем версию Python для Render
-    plan: free # Начнем с бесплатного плана
+    runtime: python-3.11.4
+    plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python src/main.py"
+    startCommand: "python -m src.main" # <-- ИСПРАВЛЕНИЕ: Запуск как модуль
     envVars:
       - key: TELEGRAM_BOT_TOKEN
-        sync: false # Ключи вводятся вручную в панели Render
+        sync: false
       - key: BYBIT_API_KEY
         sync: false
       - key: BYBIT_API_SECRET
