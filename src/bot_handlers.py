@@ -2,9 +2,11 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from functools import wraps
-from .config import ADMIN_CHAT_ID, logger
-from .bybit_client import bybit_client
-from .arbitrage_finder import ArbitrageFinder
+
+# ИЗМЕНЕНИЯ: Используем абсолютные импорты
+from src.config import ADMIN_CHAT_ID, logger
+from src.bybit_client import bybit_client
+from src.arbitrage_finder import ArbitrageFinder
 
 # Создаем единственный экземпляр ArbitrageFinder
 finder = ArbitrageFinder(bybit_client)
@@ -20,7 +22,6 @@ def admin_only(func):
     return wrapped
 
 # --- Команды бота ---
-
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Отправляет приветственное сообщение."""
     user_name = update.effective_user.first_name
@@ -43,7 +44,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Не удалось загрузить данные. Проверьте логи.")
 
-
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Показывает текущий статус бота."""
     job_name = "arbitrage_check_job"
@@ -63,7 +63,6 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(message, parse_mode='Markdown')
 
-
 @admin_only
 async def set_amount_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Устанавливает сумму для арбитражных расчетов."""
@@ -75,7 +74,6 @@ async def set_amount_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(f"✅ Сумма для расчетов установлена: {amount} USDT")
     except (IndexError, ValueError):
         await update.message.reply_text("⚠️ Неверный формат. Используйте: /set_amount 100")
-
 
 @admin_only
 async def start_arb_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -95,7 +93,6 @@ async def start_arb_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     logger.info("Цикл мониторинга арбитража запущен.")
     await update.message.reply_text("✅ Цикл мониторинга арбитража запущен.")
-
 
 @admin_only
 async def stop_arb_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
