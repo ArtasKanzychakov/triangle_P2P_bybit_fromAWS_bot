@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: bybit-arbitrage-bot
+    env: python
+    plan: free # Начнем с бесплатного плана, можно изменить позже
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python src/main.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.4
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false # Эти ключи мы введем вручную в панели Render
+      - key: BYBIT_API_KEY
+        sync: false
+      - key: BYBIT_API_SECRET
+        sync: false
+      - key: ADMIN_CHAT_ID
+        sync: false
