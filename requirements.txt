@@ -1,0 +1,4 @@
+python-telegram-bot[job-queue]==21.0.1
+pybit==5.5.0
+python-dotenv==1.0.1
+uvicorn==0.29.0
