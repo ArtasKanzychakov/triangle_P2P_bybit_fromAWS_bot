@@ -1,7 +1,8 @@
 # src/main.py
 from telegram.ext import Application, CommandHandler
-from .config import TELEGRAM_BOT_TOKEN, WEBHOOK_URL, PORT, logger
-from .bot_handlers import (
+# ИСПРАВЛЕНИЕ: Используем абсолютные импорты
+from src.config import TELEGRAM_BOT_TOKEN, WEBHOOK_URL, PORT, logger 
+from src.bot_handlers import (
     start_command,
     status_command,
     set_amount_command,
@@ -19,7 +20,7 @@ def main():
     # --- Регистрация обработчиков команд ---
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("status", status_command))
-    application.add_handler(CommandHandler("info", status_command)) # Дублируем /status на /info
+    application.add_handler(CommandHandler("info", status_command))
     application.add_handler(CommandHandler("set_amount", set_amount_command))
     application.add_handler(CommandHandler("start_arb", start_arb_command))
     application.add_handler(CommandHandler("stop_arb", stop_arb_command))
