@@ -1,7 +1,7 @@
 # src/arbitrage_finder.py
 import time
 from itertools import combinations
-from .config import logger, ADMIN_CHAT_ID
+from src.config import logger, ADMIN_CHAT_ID # <-- ИЗМЕНЕНИЕ
 
 class ArbitrageFinder:
     def __init__(self, bybit_client):
@@ -57,28 +57,18 @@ class ArbitrageFinder:
             # Проверяем, существуют ли торговые пары для всех трех "ног" цепочки
             c1, c2, c3 = combo[0], combo[1], combo[2]
             
-            # Вариант 1: c1 -> c2 -> c3 -> c1
-            if f"{c2}{c1}" in self.all_pairs and f"{c3}{c2}" in self.all_pairs and f"{c3}{c1}" in self.all_pairs:
-                self.triangular_chains.append([c1, c2, c3, 'reverse']) # c3/c1 - обратная пара
+            # Вариант 1: c1 -> c2 -> c3 -> c1 (проверяем 3 пары)
+            # Например: USDT -> BTC (BTCUSDT), BTC -> ETH (ETHBTC), ETH -> USDT (ETHUSDT)
             
-            # Вариант 2: c1 -> c3 -> c2 -> c1
-            if f"{c3}{c1}" in self.all_pairs and f"{c2}{c3}" in self.all_pairs and f"{c2}{c1}" in self.all_pairs:
-                self.triangular_chains.append([c1, c3, c2, 'reverse']) # c2/c1 - обратная пара
+            # Упрощенная логика: проверяем, что все 3 "ноги" существуют в любой ориентации
+            pair_c1_c2 = f"{c2}{c1}" if f"{c2}{c1}" in self.all_pairs else f"{c1}{c2}" if f"{c1}{c2}" in self.all_pairs else None
+            pair_c2_c3 = f"{c3}{c2}" if f"{c3}{c2}" in self.all_pairs else f"{c2}{c3}" if f"{c2}{c3}" in self.all_pairs else None
+            pair_c3_c1 = f"{c1}{c3}" if f"{c1}{c3}" in self.all_pairs else f"{c3}{c1}" if f"{c3}{c1}" in self.all_pairs else None
 
-            # ... и так далее для всех 6 возможных комбинаций (для простоты реализуем 2 самых частых)
-            # Полная реализация проверит все 6 путей для каждой тройки
-            # Например, c1/c2, c2/c3, c1/c3
-            if f"{c2}{c1}" not in self.all_pairs and f"{c1}{c2}" in self.all_pairs: c2, c1 = c1, c2 # Нормализуем первую пару
-            
-            pair1 = f"{c2}{c1}"
-            pair2_1, pair2_2 = f"{c3}{c2}", f"{c2}{c3}"
-            pair3_1, pair3_2 = f"{c3}{c1}", f"{c1}{c3}"
-
-            if pair1 in self.all_pairs:
-                if pair2_1 in self.all_pairs and pair3_1 in self.all_pairs:
-                    self.triangular_chains.append([c1, c2, c3])
-                if pair2_2 in self.all_pairs and pair3_2 in self.all_pairs:
-                    self.triangular_chains.append([c1, c3, c2])
+            if all([pair_c1_c2, pair_c2_c3, pair_c3_c1]):
+                 # Мы нашли три пары, которые связывают три монеты. Добавляем тройку.
+                 # Конкретный путь (например, C1->C2->C3->C1) будет определен в _check_single_chain
+                 self.triangular_chains.append([c1, c2, c3])
 
 
     async def check_arbitrage_opportunities(self, context):
@@ -103,24 +93,27 @@ class ArbitrageFinder:
         """
         Проверяет одну арбитражную цепочку.
         """
-        # Пример цепочки: [USDT, BTC, ETH]
-        # 1. USDT -> BTC (покупка BTC за USDT, пара BTCUSDT)
-        # 2. BTC -> ETH (покупка ETH за BTC, пара ETHBTC)
-        # 3. ETH -> USDT (продажа ETH за USDT, пара ETHUSDT)
+        # Пример цепочки: [USDT, BTC, ETH] -> Мы всегда ищем путь C1 -> C2 -> C3 -> C1
         
         c1, c2, c3 = chain[0], chain[1], chain[2]
 
         try:
-            # Определяем пары и направление сделки
+            # Определяем пары и направление сделки для пути C1 -> C2 -> C3 -> C1
+            # Leg 1: C1 -> C2
             pair1, leg1_is_reversed = self._get_pair_info(c1, c2)
+            # Leg 2: C2 -> C3
             pair2, leg2_is_reversed = self._get_pair_info(c2, c3)
+            # Leg 3: C3 -> C1
             pair3, leg3_is_reversed = self._get_pair_info(c3, c1)
+
 
             if not all([pair1, pair2, pair3]): return # Если какая-то пара не найдена
 
             # Получаем цены Ask/Bid для каждой пары
+            # Купля (Ask)
             price1 = float(self.tickers[pair1]['ask1Price']) if not leg1_is_reversed else 1 / float(self.tickers[pair1]['bid1Price'])
             price2 = float(self.tickers[pair2]['ask1Price']) if not leg2_is_reversed else 1 / float(self.tickers[pair2]['bid1Price'])
+            # Продажа (Bid)
             price3 = float(self.tickers[pair3]['bid1Price']) if not leg3_is_reversed else 1 / float(self.tickers[pair3]['ask1Price'])
             
             # --- Расчет профита ---
@@ -135,15 +128,15 @@ class ArbitrageFinder:
             if profit_percent > self.min_profit_percent:
                 
                 # --- Динамическая проверка торговых лимитов ---
-                # leg1: Покупаем amount_c2 (базовая валюта)
+                # leg1: Покупаем C2 за C1. Объем - это количество покупаемой (базовой) валюты.
                 qty1 = amount_c2 if not leg1_is_reversed else self.start_amount
                 min_qty1 = float(self.instruments_info[pair1]['minOrderQty'])
                 
-                # leg2: Покупаем amount_c3 (базовая валюта)
+                # leg2: Покупаем C3 за C2. Объем - это количество покупаемой (базовой) валюты.
                 qty2 = amount_c3 if not leg2_is_reversed else amount_c2
                 min_qty2 = float(self.instruments_info[pair2]['minOrderQty'])
 
-                # leg3: Продаем amount_c3 (базовая валюта)
+                # leg3: Продаем C3 за C1. Объем - это количество продаваемой (базовой) валюты.
                 qty3 = amount_c3 if not leg3_is_reversed else final_amount
                 min_qty3 = float(self.instruments_info[pair3]['minOrderQty'])
 
@@ -175,9 +168,11 @@ class ArbitrageFinder:
             
     def _get_pair_info(self, c_from, c_to):
         """ Вспомогательная функция для определения имени пары и ее направления """
+        # Ищем прямую пару (c_to/c_from, e.g., BTCUSDT)
         if f"{c_to}{c_from}" in self.all_pairs:
-            return f"{c_to}{c_from}", False # Прямая пара (e.g., BTC/USDT)
+            return f"{c_to}{c_from}", False # Прямая пара (покупка C_to за C_from)
+        # Ищем обратную пару (c_from/c_to, e.g., USDTBTC - редкость, но бывает)
         elif f"{c_from}{c_to}" in self.all_pairs:
-            return f"{c_from}{c_to}", True # Обратная пара (e.g., USDT/BTC)
+            return f"{c_from}{c_to}", True # Обратная пара (продажа C_from за C_to)
         else:
             return None, None
