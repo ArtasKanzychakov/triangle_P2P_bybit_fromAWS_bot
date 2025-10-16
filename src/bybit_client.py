@@ -1,6 +1,6 @@
 # src/bybit_client.py
 from pybit.unified_trading import HTTP
-from .config import BYBIT_API_KEY, BYBIT_API_SECRET, logger
+from src.config import BYBIT_API_KEY, BYBIT_API_SECRET, logger # <-- ИЗМЕНЕНИЕ
 
 class BybitClient:
     """
